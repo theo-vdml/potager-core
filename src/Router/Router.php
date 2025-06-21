@@ -7,66 +7,110 @@ use Potager\Container\Container;
 use Potager\Exceptions\HttpException;
 use Potager\View;
 use Exception;
-use Throwable;
 
+/**
+ * Class Router
+ *
+ * Handles route registration and request dispatching.
+ * Supports GET, POST, PUT, PATCH, and DELETE methods.
+ * Invokes appropriate controllers and applies middleware pipeline.
+ */
 class Router
 {
 
-	// Array to hold all the routes
+	/**
+	 * Array to hold all registered routes.
+	 *
+	 * @var Route[]
+	 */
 	protected array $routes = [];
 
+	/**
+	 * Dependency injection container.
+	 *
+	 * @var Container
+	 */
 	protected Container $container;
 
+	/**
+	 * Router constructor.
+	 *
+	 * @param Container $container Dependency injection container
+	 */
 	public function __construct(Container $container)
 	{
 		$this->container = $container;
 	}
 
 	/**
-	 * =================================
-	 * 	Methods to register new routes
-	 * =================================
+	 * Register a GET route.
+	 *
+	 * @param string $path
+	 * @param array $controllerAction
+	 * @return Route
 	 */
-
-
-	// Add a GET route
-	public function get($path, $controllerAction)
+	public function get(string $path, array $controllerAction): Route
 	{
 		return $this->register('GET', $path, $controllerAction);
 	}
 
-	// Add a POST route
-	public function post($path, $controllerAction)
+	/**
+	 * Register a POST route.
+	 *
+	 * @param string $path
+	 * @param array $controllerAction
+	 * @return Route
+	 */
+	public function post(string $path, array $controllerAction): Route
 	{
 		return $this->register('POST', $path, $controllerAction);
 	}
 
-	// Add a PUT route
-	public function put($path, $controllerAction)
+	/**
+	 * Register a PUT route.
+	 *
+	 * @param string $path
+	 * @param array $controllerAction
+	 * @return Route
+	 */
+	public function put(string $path, array $controllerAction): Route
 	{
 		return $this->register('PUT', $path, $controllerAction);
 	}
 
-	// Add a PATCH route
-	public function patch($path, $controllerAction)
+	/**
+	 * Register a PATCH route.
+	 *
+	 * @param string $path
+	 * @param array $controllerAction
+	 * @return Route
+	 */
+	public function patch(string $path, array $controllerAction): Route
 	{
 		return $this->register('PATCH', $path, $controllerAction);
 	}
 
-	// Add a DELETE route
-	public function delete($path, $controllerAction)
+	/**
+	 * Register a DELETE route.
+	 *
+	 * @param string $path
+	 * @param array $controllerAction
+	 * @return Route
+	 */
+	public function delete(string $path, array $controllerAction): Route
 	{
 		return $this->register('DELETE', $path, $controllerAction);
 	}
 
-
 	/**
-	 * =============================================
-	 * 	Unified helper to handle route registration
-	 * =============================================
+	 * Helper to register a route.
+	 *
+	 * @param string $method HTTP method
+	 * @param string $path URL path
+	 * @param array $controllerAction Controller class and method
+	 * @return Route
 	 */
-
-	protected function register($method, $path, $controllerAction)
+	protected function register($method, $path, $controllerAction): Route
 	{
 		$route = new Route($method, $path, $controllerAction);
 		$this->routes[] = $route;
@@ -74,12 +118,13 @@ class Router
 	}
 
 	/**
-	 * =============================
-	 * 	Methods to retrieve routes
-	 * =============================
+	 * Find a registered route by its name.
+	 *
+	 * @param string $name
+	 * @return Route
+	 * @throws Exception If route not found
 	 */
-
-	public function findByName($name)
+	public function findByName($name): Route
 	{
 		foreach ($this->routes as $route) {
 			if ($route->getName() === $name) {
@@ -90,17 +135,17 @@ class Router
 	}
 
 	/**
-	 * =========================================================
-	 * 	Method to dispatch the request to the appropriate route
-	 * =========================================================
+	 * Handle the current HTTP request by matching and dispatching to the appropriate route.
+	 *
+	 * @return never
+	 * @throws HttpException If no matching route is found
 	 */
-
-	public function handleRequest()
+	public function handleRequest(): never
 	{
 		$context = $this->container->make(HttpContext::class);
 		$request = $context->request();
 
-		$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+		$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH); // TODO : Get from request
 		$method = $_SERVER['REQUEST_METHOD'];
 		foreach ($this->routes as $route) {
 			if ($route->match($method, $uri)) {
@@ -109,10 +154,17 @@ class Router
 			}
 		}
 		throw new HttpException(404);
-
 	}
 
-	protected function invokeController(Route $route, HttpContext $context)
+	/**
+	 * Invoke the controller associated with a matched route.
+	 * Applies middleware and executes controller method.
+	 *
+	 * @param Route $route
+	 * @param HttpContext $context
+	 * @return never
+	 */
+	protected function invokeController(Route $route, HttpContext $context): never
 	{
 		$middlewares = $route->getMiddlewares();
 
@@ -136,6 +188,13 @@ class Router
 		exit;
 	}
 
+	/**
+	 * Resolve the controller's return value into a Response object.
+	 *
+	 * @param mixed $controllerResult Controller return value
+	 * @param Response $response Default response object
+	 * @return Response
+	 */
 	protected function resolveControllerOutput(mixed $controllerResult, Response $response): Response
 	{
 		// If the controller returned a instance of Reponse, it should prior to the default $reponse object
@@ -154,6 +213,13 @@ class Router
 		return $response;
 	}
 
+	/**
+	 * Send the HTTP response to the client.
+	 * Applies headers, status code, and body.
+	 *
+	 * @param Response $response
+	 * @return void
+	 */
 	protected function sendResponse(Response $response): void
 	{
 		// Apply the redirection if any was set
