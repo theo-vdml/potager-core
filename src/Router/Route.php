@@ -3,6 +3,7 @@ namespace Potager\Router;
 
 use phpDocumentor\Reflection\Types\Callable_;
 use Potager\Contracts\MiddlewareInterface;
+use Potager\Support\Arr;
 use Potager\Support\Str;
 
 class Route
@@ -184,7 +185,7 @@ class Route
 	 */
 	public function use(mixed $middlewares)
 	{
-		$middlewares = is_array($middlewares) ? $middlewares : [$middlewares];
+		$middlewares = Arr::wrap($middlewares);
 		foreach ($middlewares as $mw) {
 			$this->middlewares[] = $this->normalizeMiddleware($mw);
 		}
