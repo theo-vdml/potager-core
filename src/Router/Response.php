@@ -2,17 +2,19 @@
 
 namespace Potager\Router;
 
+use Potager\Container\Container;
+
 class Response
 {
-	protected Router $router;
 	protected $status;
 	protected $body;
 	protected $headers = [];
-	protected $redirect;
+	protected ?Redirect $redirect = null;
+	protected Container $container;
 
-	public function __construct(Router $router)
+	public function __construct(Container $container)
 	{
-		$this->router = $router;
+		$this->container = $container;
 	}
 
 	public function status($code)
@@ -48,9 +50,9 @@ class Response
 		return $this;
 	}
 
-	public function redirect(?string $path = null)
+	public function redirect(?string $path = null): Redirect
 	{
-		$redirect = new Redirect($this->router);
+		$redirect = $this->container->make(Redirect::class);
 		$this->redirect = $redirect;
 		if ($path)
 			$this->redirect->toPath($path);
@@ -84,7 +86,7 @@ class Response
 	/**
 	 * @internal This method is intended for internal use only.
 	 */
-	public function getRedirect()
+	public function getRedirect(): ?Redirect
 	{
 		return $this->redirect;
 	}
