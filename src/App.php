@@ -4,83 +4,133 @@ namespace Potager;
 
 use Potager\Auth\Authenticator;
 use Potager\Container\Container;
+use Potager\Exceptions\Handler;
 use Potager\Grape\Grape;
 use Potager\Limpid\Database;
 use Potager\Mailer\MailManager;
+use Potager\Router\Request;
+use Potager\Router\RequestFactory;
 use Potager\Router\Router;
+use Throwable;
 
 /**
  * Class App
  *
- * Main application class implementing a singleton pattern with service container.
- *
- * @method static Router useRouter()
- * @method static Session useSession()
- * @method static MailManager useMailer()
- * @method static Database useDatabase()
- * @method static LatteEngine useLatte()
- * @method static Authenticator useAuth()
+ * The main application bootstrap class. It acts as a central point to manage services,
+ * configurations, and commonly used components via dependency injection.
  */
 class App
 {
     /**
-     * @var ?App Singleton instance of the App
+     * Singleton instance of the App.
+     *
+     * @var ?App
      */
     protected static ?App $instance = null;
 
     /**
-     * @var ?Container Service container instance
+     * Service container instance.
+     *
+     * @var ?Container
      */
     protected ?Container $container = null;
 
     /**
-     * @var Config Application configuration instance
+     * Application configuration instance.
+     *
+     * @var Config
      */
     protected Config $config;
 
     /**
      * App constructor.
      *
+     * Initializes the application, including the configuration, service container,
+     * and MySQL database connection using Grape.
+     *
      * @param Container|null $container Optional custom service container.
-     * @throws \Exception If container is needed but not set when registering services.
+     * @throws \Exception If the container is required but not provided.
      */
     public function __construct(?Container $container = null)
     {
         $this->config = new Config();
         $this->container = $container ?? new Container();
-        $this->registerMinimalServices();
+        $this->bootstrap();
+        $this->registerHandlers();
         $dsn = $this->config->get('database.dsn');
         $user = $this->config->get('database.username');
         $password = $this->config->get('database.password');
         Grape::connectMySQL($dsn, $user, $password);
-        Database::initialize($this->config->get('database'));
     }
 
     /**
-     * Registers the minimal required services as singletons if not already registered.
+     * Register essential application services as singletons if not already present.
      *
-     * @throws \Exception If container is not set.
      * @return void
+     * @throws \Exception If no container is available.
      */
-    protected function registerMinimalServices()
+    protected function bootstrap(): void
     {
         if (!$this->container) {
             throw new \Exception("Cannot register services without a container set");
         }
 
-        $this->container->singletonIfNotExists(Router::class, fn(): Router => new Router($this->container));
-        $this->container->singletonIfNotExists('session', fn(): Session => new Session());
-        $this->container->singletonIfNotExists('mailer', fn(): MailManager => new MailManager());
-        $this->container->singletonIfNotExists('database', fn(): Database => Database::initialize($this->config->get('database')));
-        $this->container->singletonIfNotExists('latte', fn(): LatteEngine => new \Potager\LatteEngine());
-        $this->container->singletonIfNotExists('auth', fn(): Authenticator => new Authenticator($this->config->get('auth')));
+        $this->container->singletonIfNotExists(Router::class);
+        $this->container->singletonIfNotExists(Session::class);
+        $this->container->singletonIfNotExists(MailManager::class);
+
+        $this->container->singletonIfNotExists(Handler::class, function (Container $container): Handler {
+            $environment = $this->config->get('environment', 'production');
+            return new Handler($container, null, $environment === 'dev');
+        });
+
+        $this->container->singletonIfNotExists(Request::class, function (): Request {
+            $request = RequestFactory::fromGlobals();
+            return $request;
+        });
+
+        $this->container->singletonIfNotExists(Database::class, function (): Database {
+            $config = $this->config->get('database');
+            return new Database($config);
+        });
+
+        $this->container->singletonIfNotExists(Authenticator::class, function (): Authenticator {
+            $config = $this->config->get('auth');
+            return new Authenticator($config);
+        });
     }
 
     /**
-     * Returns the singleton instance of the App.
+     * Register global error, exception, and shutdown handlers.
+     *
+     * @return void
+     */
+    protected function registerHandlers(): void
+    {
+        set_error_handler(function ($serverity, $message, $file, $line): bool {
+            /** @var Handler $handler */
+            $handler = $this->container->make(Handler::class);
+            return $handler->handlePhpError($serverity, $message, $file, $line);
+        });
+
+        set_exception_handler(function (Throwable $throwable): bool {
+            /** @var Handler $handler */
+            $handler = $this->container->make(Handler::class);
+            return $handler->handleUncaughtException($throwable);
+        });
+
+        register_shutdown_function(function (): bool {
+            /** @var Handler $handler */
+            $handler = $this->container->make(Handler::class);
+            return $handler->handleFatalShutdown();
+        });
+    }
+
+    /**
+     * Retrieve the singleton instance of the App.
      *
      * @param Container|null $container Optional container to initialize the app with.
-     * @return self
+     * @return App
      */
     public static function getInstance(?Container $container = null): App
     {
@@ -91,9 +141,9 @@ class App
     }
 
     /**
-     * Get the service container instance.
+     * Get the service container.
      *
-     * @return Container The service container.
+     * @return Container
      */
     public function getContainer(): Container
     {
@@ -101,9 +151,9 @@ class App
     }
 
     /**
-     * Get the application configuration instance.
+     * Get the configuration instance.
      *
-     * @return Config The configuration object.
+     * @return Config
      */
     public function getConfig(): Config
     {
@@ -111,23 +161,7 @@ class App
     }
 
     /**
-     * Bind a service to the container.
-     *
-     * @param string $service
-     * @param \Closure $builder
-     * @return void
-     * @throws \Exception If container is not set.
-     */
-    public function bind(string $service, \Closure $builer): void
-    {
-        if (!$this->container) {
-            throw new \Exception("Cannot register services without a container set");
-        }
-        $this->container->bind($service, $builer);
-    }
-
-    /**
-     * Get the Config instance.
+     * Static accessor for the configuration instance.
      *
      * @return Config
      */
@@ -136,6 +170,11 @@ class App
         return static::getInstance()->getConfig();
     }
 
+    /**
+     * Static accessor for the Router instance.
+     *
+     * @return Router
+     */
     public static function useRouter(): Router
     {
         $container = static::getInstance()->getContainer();
@@ -143,11 +182,68 @@ class App
     }
 
     /**
-     * Magic method to allow static calls to useXyz() to fetch services.
+     * Static accessor for the Session instance.
      *
-     * @param string $method
-     * @param array $args
-     * @return mixed
+     * @return Session
+     */
+    public static function useSession(): Session
+    {
+        $container = static::getInstance()->getContainer();
+        return $container->make(Session::class);
+    }
+
+    /**
+     * Static accessor for the MailManager instance.
+     *
+     * @return MailManager
+     */
+    public static function useMailer(): MailManager
+    {
+        $container = static::getInstance()->getContainer();
+        return $container->make(MailManager::class);
+    }
+
+    /**
+     * Static accessor for the LatteEngine instance.
+     *
+     * @return LatteEngine
+     */
+    public static function useLatte(): LatteEngine
+    {
+        $container = static::getInstance()->getContainer();
+        return $container->make(LatteEngine::class);
+    }
+
+    /**
+     * Static accessor for the Database instance.
+     *
+     * @return Database
+     */
+    public static function useDatabase(): Database
+    {
+        $container = static::getInstance()->getContainer();
+        return $container->make(Database::class);
+    }
+
+    /**
+     * Static accessor for the Authenticator instance.
+     *
+     * @return Authenticator
+     */
+    public static function useAuth(): Authenticator
+    {
+        $container = static::getInstance()->getContainer();
+        return $container->make(Authenticator::class);
+    }
+
+    /**
+     * Magic static method handler for dynamic useXyz service accessors.
+     *
+     * Allows static calls like App::useCustomService() to resolve services from the container.
+     *
+     * @param string $method Method name called.
+     * @param array $args Arguments passed to the method.
+     * @return mixed The resolved service instance.
      * @throws \BadMethodCallException If service or method is undefined.
      */
     public static function __callStatic($method, $args): mixed
@@ -160,7 +256,7 @@ class App
                 throw new \BadMethodCallException("Undefined service: {$service}");
             }
 
-            return $instance->container->get($service);
+            return $instance->container->make($service, $args);
         }
         throw new \BadMethodCallException("Undefined static method {$method}");
     }
