@@ -39,18 +39,6 @@ class Handler
     }
 
     /**
-     * Registers this handler to handle errors, exceptions, and shutdowns.
-     *
-     * @return void
-     */
-    public function registerHandlers(): void
-    {
-        set_error_handler([$this, 'handlePhpError']);
-        set_exception_handler([$this, 'handleUncaughtException']);
-        register_shutdown_function([$this, 'handleFatalShutdown']);
-    }
-
-    /**
      * Handles a PHP error and converts it into an ErrorException.
      *
      * @param int $severity The severity level of the error.
