@@ -178,7 +178,7 @@ class Handler
         return match (true) {
             $severity & (E_ERROR | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR) => 'error',
             $severity & (E_WARNING | E_USER_WARNING) => 'warning',
-            $severity & (E_NOTICE | E_USER_NOTICE | E_STRICT) => 'notice',
+            $severity & (E_NOTICE | E_USER_NOTICE) => 'notice',
             $severity & (E_DEPRECATED | E_USER_DEPRECATED) => 'info',
             default => 'debug',
         };
