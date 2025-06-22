@@ -71,8 +71,12 @@ class App
             throw new \Exception("Cannot register services without a container set");
         }
 
+        // Build a session to ensure flash are rotated and lives only one request
+        // Session stored as an instance into container to be retrieved
+        $session = new Session();
+        $this->container->instanceIfNotExists(Session::class, $session);
+
         $this->container->singletonIfNotExists(Router::class);
-        $this->container->singletonIfNotExists(Session::class);
         $this->container->singletonIfNotExists(MailManager::class);
 
         $this->container->singletonIfNotExists(Handler::class, function (Container $container): Handler {
