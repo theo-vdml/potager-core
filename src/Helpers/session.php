@@ -1,6 +1,7 @@
 <?php
 
 use Potager\App;
+use Potager\Session;
 
 if (!function_exists('session')) {
     /**
@@ -26,7 +27,7 @@ if (!function_exists('flash')) {
     function flash(?string $key = null, mixed $default = null)
     {
         if (!$key)
-            return App::useSession()->allFlash();
+            return App::useSession()->getAllFlashes();
 
         return App::useSession()->getFlash($key, $default);
     }
