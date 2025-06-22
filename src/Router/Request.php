@@ -143,6 +143,19 @@ class Request
 	// ─────────────────────────────────────────────
 
 	/**
+	 * Get a single input value from merged parameters (POST overrides GET).
+	 *
+	 * @param string $key     The input key to retrieve.
+	 * @param mixed  $default Default value if key does not exist.
+	 * @return mixed
+	 */
+	public function input(string $key, mixed $default = null): mixed
+	{
+		$data = $this->all();
+		return $data[$key] ?? $default;
+	}
+
+	/**
 	 * Get query string parameters ($_GET).
 	 *
 	 * @return array
