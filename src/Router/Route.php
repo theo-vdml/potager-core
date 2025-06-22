@@ -348,7 +348,7 @@ class Route
 		foreach ($middlewares as $mw) {
 			$this->assertMiddlewareSignature($mw);
 		}
-		return $this->middlewares;
+		return $middlewares;
 	}
 
 	/**
