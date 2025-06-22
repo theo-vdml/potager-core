@@ -11,7 +11,7 @@ class Route
 	/**
 	 * @var string|null Route name
 	 */
-	protected ?string $name;
+	protected ?string $name = null;
 
 	/**
 	 * @var string HTTP method (GET, POST, etc.)
@@ -110,17 +110,29 @@ class Route
 	public function match(string $method, string $uri)
 	{
 
+		// Convert route parameters (e.g., /user/:id) into named regex capture groups
+		// ':param' becomes '(?P<param>[^/]+)', which captures any value except a slash
 		$pattern = preg_replace('#:([\w]+)#', '(?P<\1>[^/]+)', $this->path);
+
+		// Add start (^) and end ($) anchors to ensure the entire URI matches the pattern
+		// Use '@' as regex delimiter to avoid escaping slashes
 		$pattern = "@^{$pattern}$@";
 
+		// Check if the HTTP method matches and the URI matches the generated pattern
 		if ($this->method == $method && preg_match($pattern, $uri, $matches)) {
+
+			// Extract only named parameters from the regex matches (e.g., 'id' => '42')
+			// Remove numeric keys (which are the full match and unnamed groups)
 			$params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
 
+			// Store extracted parameters in the route object
 			$this->params = $params;
 
+			// The route matches the request
 			return true;
 		}
 
+		// No match: either method or URI didn't match the route definition
 		return false;
 	}
 
