@@ -1,7 +1,6 @@
 <?php
 namespace Potager\Router;
 
-use phpDocumentor\Reflection\Types\Callable_;
 use Potager\Contracts\MiddlewareInterface;
 use Potager\Support\Arr;
 use Potager\Support\Str;
@@ -58,7 +57,7 @@ class Route
 	 * @param string $name
 	 * @return $this
 	 */
-	public function name(string $name)
+	public function name(string $name): static
 	{
 		$this->name = $name;
 		return $this;
@@ -70,7 +69,7 @@ class Route
 	 * @param string $method
 	 * @return $this
 	 */
-	public function method(string $method)
+	public function method(string $method): static
 	{
 		$this->method = $method;
 		return $this;
@@ -82,7 +81,7 @@ class Route
 	 * @param string $path
 	 * @return $this
 	 */
-	public function path(string $path)
+	public function path(string $path): static
 	{
 		$this->path = $path;
 		return $this;
@@ -94,7 +93,7 @@ class Route
 	 * @param mixed $action
 	 * @return $this
 	 */
-	public function action(string $action)
+	public function action(string $action): static
 	{
 		$this->action = $action;
 		return $this;
@@ -107,7 +106,7 @@ class Route
 	 * @param string $uri URI path to match
 	 * @return bool True if route matches, false otherwise
 	 */
-	public function match(string $method, string $uri)
+	public function match(string $method, string $uri): bool
 	{
 
 		// Convert route parameters (e.g., /user/:id) into named regex capture groups
@@ -141,7 +140,7 @@ class Route
 	 *
 	 * @return string
 	 */
-	public function getMethod()
+	public function getMethod(): string
 	{
 		return $this->method;
 	}
@@ -151,7 +150,7 @@ class Route
 	 *
 	 * @return string
 	 */
-	public function getPath()
+	public function getPath(): string
 	{
 		return $this->path;
 	}
@@ -161,9 +160,9 @@ class Route
 	 *
 	 * @return string|null
 	 */
-	public function getName()
+	public function getName(): string|null
 	{
-		return $this->name;
+		return $this->name ?? null;
 	}
 
 	/**
@@ -195,7 +194,7 @@ class Route
 	 *
 	 * @throws \Exception If middleware is invalid or callable does not accept exactly 2 parameters.
 	 */
-	public function use(mixed $middlewares)
+	public function use(mixed $middlewares): static
 	{
 		$middlewares = Arr::wrap($middlewares);
 		foreach ($middlewares as $mw) {
@@ -214,7 +213,7 @@ class Route
 	 * @param callable $middleware
 	 * @throws \Exception
 	 */
-	private function assertMiddlewareSignature($middleware)
+	private function assertMiddlewareSignature($middleware): void
 	{
 		if (!is_callable($middleware)) {
 			throw new \Exception("Normalized middleware is not callable.");
@@ -295,7 +294,7 @@ class Route
 	 *
 	 * @throws \Exception If middleware class not found
 	 */
-	private function resolveMiddlewareAlias(string $alias)
+	private function resolveMiddlewareAlias(string $alias): string
 	{
 		$baseName = Str::toPascalCase("{$alias} Middleware");
 		$class = "App\\Middlewares\\{$baseName}";
@@ -312,7 +311,7 @@ class Route
 	 *
 	 * @return callable[]
 	 */
-	public function getMiddlewares()
+	public function getMiddlewares(): array
 	{
 		foreach ($this->middlewares as $mw) {
 			$this->assertMiddlewareSignature($mw);
