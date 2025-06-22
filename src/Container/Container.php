@@ -58,10 +58,10 @@ class Container implements ContainerInterface
      * Register a singleton service binding (lazy-loaded).
      *
      * @param string $id Identifier for the service.
-     * @param ?callable $closure A factory that returns the service instance.
+     * @param callable|null $closure A factory that returns the service instance.
      * @return void
      */
-    public function singleton(string $id, ?callable $closure = null)
+    public function singleton(string $id, callable|null $closure = null)
     {
         if ($closure !== null) {
             $this->bindings[$id] = $closure;
@@ -99,10 +99,10 @@ class Container implements ContainerInterface
      * Register a singleton binding only if not already registered.
      *
      * @param string $id Identifier for the service.
-     * @param ?callable $closure A factory for the singleton service.
+     * @param callable|null $closure A factory for the singleton service.
      * @return void
      */
-    public function singletonIfNotExists(string $id, ?callable $closure = null)
+    public function singletonIfNotExists(string $id, callable|null $closure = null): void
     {
         if (!$this->has($id)) {
             $this->singleton($id, $closure);
