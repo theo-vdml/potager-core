@@ -2,6 +2,8 @@
 
 namespace Potager\Grape;
 
+use PDO;
+
 class FieldContext
 {
 
@@ -22,7 +24,7 @@ class FieldContext
     // The error reporter
     private ErrorReporter $errorReporter;
 
-    private \PDO $pdo;
+    private ?PDO $pdo;
 
 
     public function __construct(mixed &$value, mixed &$root = null, mixed &$sanitized = null, $name = null, ?FieldContext $parent = null, $path = [], $errorReporter = null, $pdo = null)
@@ -45,7 +47,7 @@ class FieldContext
         $this->path = $name !== null ? [...$path, $name] : $path;
         $this->errorReporter = $errorReporter ?? new ErrorReporter();
 
-        $this->pdo = $pdo ?? Grape::getPDO();
+        $this->pdo = $pdo ?? Grape::getPDO() ?? null;
     }
 
 
