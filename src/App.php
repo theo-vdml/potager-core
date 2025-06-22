@@ -57,6 +57,7 @@ class App
         $this->container = $container ?? new Container();
         $this->bootstrap();
         $this->registerHandlers();
+        static::$instance = $this;
     }
 
     /**
