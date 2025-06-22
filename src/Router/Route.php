@@ -2,6 +2,7 @@
 namespace Potager\Router;
 
 use Potager\Contracts\MiddlewareInterface;
+use Potager\Middleware\CsrfMiddleware;
 use Potager\Support\Arr;
 use Potager\Support\Str;
 
@@ -36,6 +37,21 @@ class Route
 	 * @var callable[] Array of middleware callables
 	 */
 	protected array $middlewares = [];
+
+	/**
+	 * Indicates whether CSRF protection is enabled for this route.
+	 *
+	 * @var bool
+	 */
+	protected bool $csrfEnabled = false;
+
+	/**
+	 * CSRF token time-to-live in seconds.
+	 * Null means no expiration by default.
+	 *
+	 * @var int|null
+	 */
+	protected ?int $csrfTtl = null;
 
 	/**
 	 * Route constructor.
@@ -204,6 +220,20 @@ class Route
 	}
 
 	/**
+	 * Enable or disable CSRF protection for this route and optionally set a token TTL.
+	 *
+	 * @param bool     $enable Whether to enable CSRF middleware (default: true).
+	 * @param int|null $ttl    Optional token time-to-live in seconds (null means no expiration).
+	 * @return static          Returns the current Route instance for method chaining.
+	 */
+	public function csrf(bool $enable = true, ?int $ttl = null): static
+	{
+		$this->csrfEnabled = $enable;
+		$this->csrfTtl = $ttl;
+		return $this;
+	}
+
+	/**
 	 * Validates that a callable middleware has the correct signature.
 	 *
 	 * It must accept exactly two parameters:
@@ -313,9 +343,38 @@ class Route
 	 */
 	public function getMiddlewares(): array
 	{
-		foreach ($this->middlewares as $mw) {
+		$middlewares = $this->appendCsrfMiddleware();
+
+		foreach ($middlewares as $mw) {
 			$this->assertMiddlewareSignature($mw);
 		}
 		return $this->middlewares;
+	}
+
+	/**
+	 * Append CSRF middleware to the middleware stack if CSRF is enabled.
+	 * CSRF middleware is prepended to run first.
+	 *
+	 * @return callable[] Middleware stack with CSRF middleware prepended if enabled.
+	 */
+	protected function appendCsrfMiddleware(): array
+	{
+		$middlewares = $this->middlewares;
+
+		if ($this->csrfEnabled) {
+			// CSRF middleware class (replace with your actual CSRF middleware class)
+			$csrfMiddlewareClass = CsrfMiddleware::class;
+
+			// Wrap in a lazy loading closure with optional TTL
+			$csrfMiddleware = function (HttpContext $ctx, callable $next) use ($csrfMiddlewareClass) {
+				$instance = new $csrfMiddlewareClass($this->csrfTtl);
+				return $instance->handle($ctx, $next);
+			};
+
+			// Prepend CSRF middleware
+			array_unshift($middlewares, $csrfMiddleware);
+		}
+
+		return $middlewares;
 	}
 }
