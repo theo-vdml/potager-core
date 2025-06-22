@@ -17,16 +17,28 @@ class LatteEngine
     {
         $this->latte = new Engine();
         $this->viewsPath = rtrim($viewsPath ?? path('/views'), '/');
-        $this->cachePath = rtrim($cachePath ?? path('/storage/.cache/latte'), '/');
-
-        // Ensure cache directory exists
-        if (!is_dir($this->cachePath)) {
-            if (!mkdir($this->cachePath, 0775, true) && !is_dir($this->cachePath)) {
-                throw new RuntimeException("Failed to create Latte cache directory at: {$this->cachePath}");
-            }
-        }
+        $this->cachePath = $this->resolveCachePath($cachePath, 'latte');
 
         $this->latte->setTempDirectory($this->cachePath);
+    }
+
+    protected function resolveCachePath(?string $path, string $namespace): string
+    {
+        if ($path === null) {
+            $path = sys_get_temp_dir() . "/potager/cache-{$namespace}";
+            @mkdir($path, 0775, true);
+            return $path;
+        }
+
+        if (!is_dir($path)) {
+            throw new RuntimeException("Provided cache path [$path] does not exist.");
+        }
+
+        if (!is_writable($path)) {
+            throw new RuntimeException("Provided cache path [$path] is not writable.");
+        }
+
+        return rtrim($path, '/');
     }
 
     public function render(string $view, array $params = []): string
