@@ -251,7 +251,7 @@ class Session
     {
         if ($this->flashCommitRegistered)
             return;
-        register_shutdown_function(fn(): void => $this->commitFlash());
+        register_shutdown_function(fn() => $this->commitFlash());
         $this->flashCommitRegistered = true;
     }
 }
