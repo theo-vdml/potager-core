@@ -4,6 +4,7 @@ namespace Potager;
 
 use Latte\Engine;
 
+use Latte\Runtime\Html;
 use RuntimeException;
 
 class LatteEngine
@@ -20,6 +21,13 @@ class LatteEngine
         $this->cachePath = $this->resolveCachePath($cachePath, 'latte');
 
         $this->latte->setTempDirectory($this->cachePath);
+
+        $this->latte->addFunction('csrf', function () {
+            $token = csrf();
+            return new Html(
+                '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars($token) . '">'
+            );
+        });
     }
 
     protected function resolveCachePath(?string $path, string $namespace): string
