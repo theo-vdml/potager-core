@@ -132,7 +132,7 @@ class Handler
 
         http_response_code(500);
         $this->respondWithStackTrace($throwable);
-        return;
+        exit;
     }
 
     /**
@@ -153,18 +153,18 @@ class Handler
         if (!$this->isDev) {
             http_response_code($exception->getCode());
             $this->respondWithoutStackTrace($exception);
-            return;
+            exit;
         }
 
         if ($exception->getCode() < 500) {
             http_response_code($exception->getCode());
             $this->respondWithoutStackTrace($exception);
-            return;
+            exit;
         }
 
         http_response_code($exception->getCode());
         $this->respondWithStackTrace($exception);
-        return;
+        exit;
     }
 
     /**
