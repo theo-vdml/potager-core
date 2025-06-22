@@ -57,10 +57,6 @@ class App
         $this->container = $container ?? new Container();
         $this->bootstrap();
         $this->registerHandlers();
-        $dsn = $this->config->get('database.dsn');
-        $user = $this->config->get('database.username');
-        $password = $this->config->get('database.password');
-        Grape::connectMySQL($dsn, $user, $password);
     }
 
     /**
