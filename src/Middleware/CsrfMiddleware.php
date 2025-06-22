@@ -9,7 +9,7 @@ use Potager\Router\HttpContext;
 
 class CsrfMiddleware implements MiddlewareInterface
 {
-    protected int $ttl;
+    protected ?int $ttl;
 
     public function __construct(?int $ttl = null)
     {
