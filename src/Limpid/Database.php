@@ -17,31 +17,17 @@ class Database
 
     protected Connection $connection;
 
-    protected static ?Database $instance = null;
 
     /**
      * Database constructor.
      * Initializes the Pixie database connection.
      */
-    public function __construct(array $config, bool $saveAsInstance = false)
+    public function __construct(array $config)
     {
         $this->initializeConnection($config);
-        static::$instance = $saveAsInstance ? $this : static::$instance;
     }
 
-    /**
-     * Initializes the Database instance with the given configuration.
-     *
-     * @param array $config
-     * @return Database
-     */
-    public static function initialize(array $config): Database
-    {
-        if (static::$instance === null) {
-            static::$instance = new self($config);
-        }
-        return static::$instance;
-    }
+
 
     /**
      * Get the singleton instance of the Database.
@@ -50,10 +36,7 @@ class Database
      */
     public static function getInstance(): Database
     {
-        if (static::$instance === null) {
-            throw new \RuntimeException("Database instance not initialized.");
-        }
-        return static::$instance;
+        return App::useDatabase();
     }
 
     /**
