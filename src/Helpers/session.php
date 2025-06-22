@@ -68,3 +68,14 @@ if (!function_exists('old')) {
         return App::useSession()->getFlash("old.{$key}", $default);
     }
 }
+
+if (!function_exists('csrf')) {
+    function csrf(): string
+    {
+        $session = App::useSession();
+        $token = bin2hex(random_bytes(32));
+        $session->set('_csrf_token', $token);
+        $session->set('_csrf_token_time', time());
+        return $token;
+    }
+}
