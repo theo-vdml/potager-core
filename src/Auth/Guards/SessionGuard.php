@@ -5,6 +5,7 @@ namespace Potager\Auth\Guards;
 use InvalidArgumentException;
 use Potager\Auth\Contracts\AuthGuard;
 use Potager\Auth\Contracts\UserProvider;
+use RuntimeException;
 
 /**
  * SessionGuard handles user authentication using PHP sessions.
@@ -22,7 +23,7 @@ class SessionGuard implements AuthGuard
     ) {
         // Ensure the session is started when the guard is instantiated.
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            throw new RuntimeException("Session must be started to use Session guard");
         }
     }
 

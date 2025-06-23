@@ -65,6 +65,14 @@ class Session
         $this->flashNamespace = $flashNamespace;
 
         if (session_status() === PHP_SESSION_NONE) {
+            session_set_cookie_params([
+                'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+                'httponly' => true,
+                'samesite' => 'Lax',
+                'path' => '/',
+                'domain' => ''
+            ]);
+
             session_start();
         }
 
