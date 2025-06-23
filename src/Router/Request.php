@@ -111,6 +111,27 @@ class Request
 		return $this->server[$normalized] ?? $default;
 	}
 
+	/**
+	 * Get the client's IP address.
+	 *
+	 * @return string|null
+	 */
+	public function ip(): ?string
+	{
+		// Prise en compte des cas de proxy ou reverse proxy
+		if (!empty($this->server['HTTP_CLIENT_IP'])) {
+			return $this->server['HTTP_CLIENT_IP'];
+		}
+
+		if (!empty($this->server['HTTP_X_FORWARDED_FOR'])) {
+			// Peut contenir une liste d'IP (séparées par virgule), on prend la première
+			return explode(',', $this->server['HTTP_X_FORWARDED_FOR'])[0];
+		}
+
+		return $this->server['REMOTE_ADDR'] ?? null;
+	}
+
+
 	// ─────────────────────────────────────────────
 	// 🗺️ Routing & Parameters
 	// ─────────────────────────────────────────────

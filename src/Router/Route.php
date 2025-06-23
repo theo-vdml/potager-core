@@ -3,6 +3,7 @@ namespace Potager\Router;
 
 use Potager\Contracts\MiddlewareInterface;
 use Potager\Middleware\CsrfMiddleware;
+use Potager\Middleware\ThrottleMiddleware;
 use Potager\Support\Arr;
 use Potager\Support\Str;
 
@@ -52,6 +53,34 @@ class Route
 	 * @var int|null
 	 */
 	protected ?int $csrfTtl = null;
+
+	/**
+	 * Indicates whether throttling is enabled for this route.
+	 *
+	 * @var bool
+	 */
+	protected bool $throttleEnabled = false;
+
+	/**
+	 * Throttle rate: max requests per time window.
+	 *
+	 * @var int|null
+	 */
+	protected ?int $throttleMaxAttempts = null;
+
+	/**
+	 * Time window in seconds for throttling.
+	 *
+	 * @var int|null
+	 */
+	protected ?int $throttleDecay = null;
+
+	/**
+	 * Time prefix for the session key when throttling
+	 *
+	 * @var string|null
+	 */
+	protected ?string $throttleKeyPrefix = null;
 
 	/**
 	 * Route constructor.
@@ -234,6 +263,24 @@ class Route
 	}
 
 	/**
+	 * Enable request throttling for this route.
+	 *
+	 * @param int|null $maxRequests Maximum number of requests allowed.
+	 * @param int|null $decaySeconds Time window for rate limit in seconds.
+	 * @param string|null $keyPrefix 
+	 * @return static
+	 */
+	public function throttle(bool $enable = true, ?int $maxAttempts = 60, ?int $decaySeconds = 60, ?string $keyPrefix = 'throttle_'): static
+	{
+		$this->throttleEnabled = $enable;
+		$this->throttleMaxAttempts = $maxAttempts;
+		$this->throttleDecay = $decaySeconds;
+		$this->throttleKeyPrefix = $keyPrefix;
+		return $this;
+	}
+
+
+	/**
 	 * Validates that a callable middleware has the correct signature.
 	 *
 	 * It must accept exactly two parameters:
@@ -343,7 +390,7 @@ class Route
 	 */
 	public function getMiddlewares(): array
 	{
-		$middlewares = $this->appendCsrfMiddleware();
+		$middlewares = $this->buildMiddlewareStack();
 
 		foreach ($middlewares as $mw) {
 			$this->assertMiddlewareSignature($mw);
@@ -351,28 +398,28 @@ class Route
 		return $middlewares;
 	}
 
-	/**
-	 * Append CSRF middleware to the middleware stack if CSRF is enabled.
-	 * CSRF middleware is prepended to run first.
-	 *
-	 * @return callable[] Middleware stack with CSRF middleware prepended if enabled.
-	 */
-	protected function appendCsrfMiddleware(): array
+
+	protected function buildMiddlewareStack(): array
 	{
 		$middlewares = $this->middlewares;
 
+		// Add CSRF Middleware first if enabled
 		if ($this->csrfEnabled) {
-			// CSRF middleware class (replace with your actual CSRF middleware class)
-			$csrfMiddlewareClass = CsrfMiddleware::class;
-
-			// Wrap in a lazy loading closure with optional TTL
-			$csrfMiddleware = function (HttpContext $ctx, callable $next) use ($csrfMiddlewareClass) {
-				$instance = new $csrfMiddlewareClass($this->csrfTtl);
+			$csrfMiddleware = function (HttpContext $ctx, callable $next) {
+				$instance = new CsrfMiddleware($this->csrfTtl);
 				return $instance->handle($ctx, $next);
 			};
-
-			// Prepend CSRF middleware
 			array_unshift($middlewares, $csrfMiddleware);
+		}
+
+		// Add Throttle Middleware if enabled
+		if ($this->throttleEnabled) {
+			$throttleMiddleware = function (HttpContext $ctx, callable $next) {
+				$class = ThrottleMiddleware::class;
+				$instance = new $class($this->throttleMaxAttempts, $this->throttleDecay, $this->throttleKeyPrefix);
+				return $instance->handle($ctx, $next);
+			};
+			array_unshift($middlewares, $throttleMiddleware);
 		}
 
 		return $middlewares;
