@@ -5,7 +5,6 @@ namespace Potager;
 use Potager\Auth\Authenticator;
 use Potager\Container\Container;
 use Potager\Exceptions\Handler;
-use Potager\Grape\Grape;
 use Potager\Limpid\Database;
 use Potager\Mailer\MailManager;
 use Potager\Router\Request;
@@ -94,18 +93,21 @@ class App
     protected function registerHandlers(): void
     {
         set_error_handler(function ($serverity, $message, $file, $line): bool {
+            /** @var Handler $handler */
             $handler = $this->container->make(Handler::class);
-            return $handler->handlePhpError($serverity, $message, $file, $line);
+            return $handler->handlePhpErrorAsException($serverity, $message, $file, $line);
         });
 
         set_exception_handler(function (Throwable $throwable): bool {
+            /** @var Handler $handler */
             $handler = $this->container->make(Handler::class);
-            return $handler->handleUncaughtException($throwable);
+            return $handler->handleUnhandledException($throwable);
         });
 
         register_shutdown_function(function (): bool {
+            /** @var Handler $handler */
             $handler = $this->container->make(Handler::class);
-            return $handler->handleFatalShutdown();
+            return $handler->handleShutdownFatalError();
         });
     }
 
