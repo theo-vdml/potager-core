@@ -2,7 +2,7 @@
 
 namespace Potager\Middleware;
 
-use Potager\App;
+use Potager\Cache;
 use Potager\Contracts\MiddlewareInterface;
 use Potager\Exceptions\HttpException;
 use Potager\Router\HttpContext;
@@ -22,11 +22,10 @@ class ThrottleMiddleware implements MiddlewareInterface
 
     public function handle(HttpContext $ctx, callable $next): void
     {
-        $session = App::useSession();
         $ip = $ctx->request()->ip() ?? 'unknown';
         $key = $this->keyPrefix . sha1($ip);
 
-        $record = $session->get($key, ['count' => 0, 'start' => time()]);
+        $record = Cache::get($key) ?? ['count' => 0, 'start' => time()];
         $now = time();
 
         if ($now - $record['start'] > $this->decaySeconds) {
@@ -35,12 +34,14 @@ class ThrottleMiddleware implements MiddlewareInterface
             if ($record['count'] >= $this->maxAttempts) {
                 $retryAfter = $this->decaySeconds - ($now - $record['start']);
                 header("Retry-After: {$retryAfter}");
-                throw new HttpException(429);
+                throw new HttpException(429, 'Too Many Requests');
             }
             $record['count']++;
         }
 
-        $session->set($key, $record);
+        // Le cache expire automatiquement à la fin de la fenêtre
+        $ttl = $this->decaySeconds - ($now - $record['start']);
+        Cache::set($key, $record, $ttl > 0 ? $ttl : 1);
 
         $next();
     }
