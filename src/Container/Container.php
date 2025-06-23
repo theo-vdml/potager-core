@@ -326,9 +326,17 @@ class Container implements ContainerInterface
                     continue;
                 }
 
-                // Resolve the dependency using the container
-                $args[] = $this->make($typeName);
-                continue;
+                try {
+                    // Resolve the dependency using the container
+                    $args[] = $this->make($typeName);
+                    continue;
+                } catch (Throwable $e) {
+                    if ($param->isDefaultValueAvailable()) {
+                        $args[] = $param->getDefaultValue();
+                        continue;
+                    }
+                    throw $e;
+                }
             }
 
             // Use default value if available

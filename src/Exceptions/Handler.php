@@ -5,9 +5,9 @@ namespace Potager\Exceptions;
 use DohFormatting\Doh\Doh;
 use ErrorException;
 use Exception;
-use Potager\Router\HttpContext;
+use Potager\Config;
+use Potager\LatteEngine;
 use Potager\Router\Request;
-use Psr\Container\ContainerInterface;
 use Throwable;
 use Psr\Log\LoggerInterface;
 
@@ -18,24 +18,18 @@ use Psr\Log\LoggerInterface;
  */
 class Handler
 {
-
-    private HttpContext $context;
-    private Request $request;
+    private bool $isDev = false;
 
     /**
      * Handler constructor.
-     *
-     * @param \Psr\Container\ContainerInterface $container
-     * @param ?LoggerInterface $logger PSR-3 logger instance used for logging errors.
-     * @param bool $isDev Whether the application is in development mode (controls verbosity).
      */
     public function __construct(
-        private ContainerInterface $container,
+        private Config $config,
+        private Request $request,
+        private LatteEngine $latteEngine,
         private ?LoggerInterface $logger = null,
-        private bool $isDev = false,
     ) {
-        $this->context = $this->container->get(HttpContext::class);
-        $this->request = $this->context->request();
+        $this->isDev = $this->config->get('environment', 'production') === 'dev';
     }
 
     /**
@@ -239,11 +233,47 @@ class Handler
         }
 
         if ($type === 'text/html') {
-            echo "<html><head><title>Error</title></head><body><h1>{$statusCode} Error</h1><p>{$message}</p></body></html>";
+            $this->resolveErrorView($statusCode, $message);
             return;
         }
 
         echo "{$statusCode} Error: {$message}";
+        return;
+    }
+
+    protected function resolveErrorView(int $status, string $message)
+    {
+
+        $code = (string) $status;
+
+        $candidates = [];
+
+        $candidates[] = "errors.{$code}";
+
+        if (strlen($code) === 3) {
+            $candidates[] = "errors.{$code[0]}{$code[1]}x";
+        }
+
+        if (strlen($code) === 3) {
+            $candidates[] = "errors.{$code[0]}xx";
+        }
+
+        $candidates[] = "errors.http";
+        $candidates[] = __DIR__ . "/ressources/http.latte";
+
+        foreach ($candidates as $view) {
+            if ($this->latteEngine->viewExists($view)) {
+                echo $this->latteEngine->render($view, [
+                    'status' => $status,
+                    'message' => $message
+                ]);
+                return;
+            }
+        }
+
+        $code = htmlspecialchars($code);
+        $message = htmlspecialchars($message);
+        echo "<html><head><title>Error</title></head><body><h1>{$status} Error</h1><p>{$message}</p></body></html>";
         return;
     }
 }

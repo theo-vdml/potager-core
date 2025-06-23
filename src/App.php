@@ -36,13 +36,6 @@ class App
     protected ?Container $container = null;
 
     /**
-     * Application configuration instance.
-     *
-     * @var Config
-     */
-    protected Config $config;
-
-    /**
      * App constructor.
      *
      * Initializes the application, including the configuration, service container,
@@ -53,7 +46,6 @@ class App
      */
     public function __construct(?Container $container = null)
     {
-        $this->config = new Config();
         $this->container = $container ?? new Container();
         $this->bootstrap();
         $this->registerHandlers();
@@ -72,18 +64,11 @@ class App
             throw new \Exception("Cannot register services without a container set");
         }
 
-        // Build a session to ensure flash are rotated and lives only one request
-        // Session stored as an instance into container to be retrieved
-        $session = new Session();
-        $this->container->instanceIfNotExists(Session::class, $session);
+        $this->container->instanceIfNotExists(Config::class, new Config());
+        $this->container->instanceIfNotExists(Session::class, new Session());
 
         $this->container->singletonIfNotExists(Router::class);
         $this->container->singletonIfNotExists(MailManager::class);
-
-        $this->container->singletonIfNotExists(Handler::class, function (Container $container): Handler {
-            $environment = $this->config->get('environment', 'production');
-            return new Handler($container, null, $environment === 'dev');
-        });
 
         $this->container->singletonIfNotExists(Request::class, function (): Request {
             $request = RequestFactory::fromGlobals();
@@ -91,12 +76,12 @@ class App
         });
 
         $this->container->singletonIfNotExists(Database::class, function (): Database {
-            $config = $this->config->get('database');
+            $config = $this->getConfig()->get('database');
             return new Database($config);
         });
 
         $this->container->singletonIfNotExists(Authenticator::class, function (): Authenticator {
-            $config = $this->config->get('auth');
+            $config = $this->getConfig()->get('auth');
             return new Authenticator($config);
         });
     }
@@ -109,19 +94,16 @@ class App
     protected function registerHandlers(): void
     {
         set_error_handler(function ($serverity, $message, $file, $line): bool {
-            /** @var Handler $handler */
             $handler = $this->container->make(Handler::class);
             return $handler->handlePhpError($serverity, $message, $file, $line);
         });
 
         set_exception_handler(function (Throwable $throwable): bool {
-            /** @var Handler $handler */
             $handler = $this->container->make(Handler::class);
             return $handler->handleUncaughtException($throwable);
         });
 
         register_shutdown_function(function (): bool {
-            /** @var Handler $handler */
             $handler = $this->container->make(Handler::class);
             return $handler->handleFatalShutdown();
         });
@@ -158,7 +140,7 @@ class App
      */
     public function getConfig(): Config
     {
-        return $this->config;
+        return $this->container->make(Config::class);
     }
 
     /**

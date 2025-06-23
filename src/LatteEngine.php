@@ -51,16 +51,29 @@ class LatteEngine
 
     public function render(string $view, array $params = []): string
     {
-        $file = $this->resolveView($view);
+        $this->assertViewExists($view);
+        $file = $this->getViewFile($view);
         return $this->latte->renderToString($file, $params);
     }
 
-    protected function resolveView(string $view): string
+    public function getViewFile($view): string
     {
+        if (file_exists($view))
+            return $view;
         $path = $this->viewsPath . '/' . str_replace('.', '/', $view) . '.latte';
-        if (!file_exists($path))
-            throw new RuntimeException("Latte view [{$view}] not found at [{$path}]. Did you forget to create it?");
         return $path;
+    }
+
+    public function viewExists(string $view): bool
+    {
+        $file = $this->getViewFile($view);
+        return file_exists($file);
+    }
+
+    protected function assertViewExists(string $view): void
+    {
+        if (!$this->viewExists($view))
+            throw new RuntimeException("Latte view [{$view}] not found at [{$this->getViewFile($view)}]. Did you forget to create it?");
     }
 
 }
