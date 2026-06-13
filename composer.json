@@ -1,11 +1,12 @@
 {
-    "name": "potager/potager",
+    "name": "potager/potager-core",
     "description": "A small PHP MVC Framework",
     "type": "library",
     "autoload": {
         "psr-4": {
             "Potager\\": "src/",
-            "Potager\\Test\\": "tests/App"
+            "Potager\\Test\\": "tests/App",
+            "Tests\\": "tests/"
         },
         "files": [
             "src/Helpers/path.php",
@@ -30,7 +31,8 @@
         "willdurand/negotiation": "^3.1"
     },
     "require-dev": {
-        "pestphp/pest": "^3.8"
+        "pestphp/pest": "^3.8",
+        "ace-of-aces/intellipest": "^1.0"
     },
     "config": {
         "allow-plugins": {

@@ -131,7 +131,7 @@ class Authenticator
      * Register a new guard.
      *
      * @param string $name The name of the guard.
-     * @param AuthGuard $guard The guard instance.
+     * @param callable $guard The guard factory callable.
      * @throws \RuntimeException If the guard is already registered.
      */
     public function registerGuard(string $name, callable $guard): void
@@ -203,7 +203,6 @@ class Authenticator
     /**
      * Authenticate the user and set the authenticated user.
      *
-     * @return mixed The authenticated user.
      * @throws \RuntimeException If no user is authenticated.
      */
     public function authenticate(): void
@@ -275,7 +274,6 @@ class Authenticator
     {
         $this->authenticatedUser = null;
         $this->authenticatedUsing = null;
-        $this->guardToUseName = null;
     }
 
     /**

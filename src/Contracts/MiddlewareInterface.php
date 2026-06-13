@@ -17,7 +17,7 @@ interface MiddlewareInterface
      * Process the HTTP context and optionally invoke the next middleware.
      *
      * @param HttpContext $ctx  The current HTTP context (request/response).
-     * @param callable    $next The next middleware callable in the pipeline.     *
+     * @param callable    $next The next middleware callable in the pipeline.
      */
     public function handle(HttpContext $ctx, callable $next): void;
 }

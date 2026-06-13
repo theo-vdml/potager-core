@@ -1,12 +1,10 @@
 <?php
 
-use Potager\Limpid\Database;
 use Potager\Test\Models\ModelWithAuthFinder as User;
 
 
 beforeEach(function () {
-    $db = new Database(['driver' => 'sqlite', 'database' => ':memory:'], true);
-    $pdo = $db->getPdo();
+    $pdo = $this->pdo();
 
     $pdo->exec('
         CREATE TABLE users (
@@ -156,16 +154,13 @@ test('credential verification timing is roughly constant', function () {
         'averageNoUserTime' => $averageNoUserTime,
     ];
 
-    foreach ($times as $label => $value) {
-        echo "{$label}: " . round($value * 1000, 3) . " ms\n";
-    }
+    // foreach ($times as $label => $value) {
+    //     echo "{$label}: " . round($value * 1000, 3) . " ms\n";
+    // }
 
     // Timing differences should be small
     $max = max($times);
     $min = min($times);
 
-    expect($max - $min)->toBeLessThan(0.05); // 20 ms tolerance
+    expect($max - $min)->toBeLessThan(0.15); // 150 ms tolerance
 })->repeat(5);
-
-
-

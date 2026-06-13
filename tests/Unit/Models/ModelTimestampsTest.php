@@ -1,7 +1,6 @@
 <?php
 
 use Potager\Limpid\Attributes\Column;
-use Potager\Limpid\Database;
 use Potager\Limpid\Model;
 use Potager\Limpid\Traits\WithTimestamps;
 
@@ -17,8 +16,7 @@ class Post extends Model
 }
 
 beforeEach(function () {
-    $db = new Database(['driver' => 'sqlite', 'database' => ':memory:'], true);
-    $pdo = $db->getPdo();
+    $pdo = $this->pdo();
 
     $pdo->exec('
         CREATE TABLE posts (

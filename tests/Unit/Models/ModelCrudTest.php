@@ -1,15 +1,9 @@
 <?php
 
-use Potager\Limpid\Database;
 use Potager\Test\Models\User;
 
 beforeEach(function () {
-    $db = new Database([
-        'driver' => 'sqlite',
-        'database' => ':memory:'
-    ], true);
-
-    $pdo = $db->getPdo();
+    $pdo = $this->pdo();
 
     // Create a sample database
     $pdo->exec('

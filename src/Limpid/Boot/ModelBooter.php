@@ -72,7 +72,7 @@ class ModelBooter
         } else if ($reflection->hasMethod('tableName')) {
             $method = $reflection->getMethod('tableName');
             $returnType = $method->getReturnType();
-            $isStringReturn = $returnType && $returnType->getName() === 'string';
+            $isStringReturn = $returnType instanceof \ReflectionNamedType && $returnType->getName() === 'string';
             if ($method->isStatic() && $isStringReturn) {
                 $table = $method->invoke(null);
             } else {
@@ -99,8 +99,30 @@ class ModelBooter
 
         /** @var ReflectionProperty $property */
         foreach ($reflection->getProperties() as $property) {
+
+            if ($property->isStatic()) {
+                continue;
+            }
+
             $propertyName = $property->getName();
-            $propertyType = $property->getType()?->getName() ?? null;
+
+            $reflectionType = $property->getType();
+            $propertyType = null;
+
+            if ($reflectionType instanceof \ReflectionNamedType) {
+                $propertyType = $reflectionType->getName();
+            } else if ($reflectionType instanceof \ReflectionUnionType) {
+                foreach ($reflectionType->getTypes() as $type) {
+                    if ($type instanceof \ReflectionNamedType) {
+                        if ($type->getName() !== 'null') {
+                            $propertyType = $type->getName();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // $propertyType = $property->getType()?->getName() ?? null;
             $attrs = self::extractAttributes($property);
 
             // Prevent using both Column AND Computed on the same property
@@ -226,7 +248,7 @@ class ModelBooter
         $classBaseName = Utils::classBasename($modelClass);
         $bootMethod = Str::toCamelCase("boot {$classBaseName}");
         if ($reflection->hasMethod($bootMethod)) {
-            $method = $reflection->getMethod($traitBootMethod);
+            $method = $reflection->getMethod($bootMethod);
             $hasRequiredParameters = array_filter($method->getParameters(), fn($param) => !$param->isOptional());
             if (!$method->isStatic() || !$method->isPublic() || count($hasRequiredParameters) > 0) {
                 throw new InvalidBootMethodException($modelClass, $bootMethod);

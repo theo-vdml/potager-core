@@ -1,14 +1,14 @@
 <?php
 
+use Potager\App;
 use Potager\Auth\Authenticator;
 use Potager\Auth\Guards\SessionGuard;
 use Potager\Auth\Providers\LimpidUserProvider;
-use Potager\Limpid\Database;
 use Potager\Test\Models\ModelWithAuthFinder as User;
 
+
 beforeEach(function () {
-    $this->db = new Database(['driver' => 'sqlite', 'database' => ':memory:'], true);
-    $pdo = $this->db->getPdo();
+    $pdo = App::useDatabase()->getPdo();
 
     $pdo->exec('
         CREATE TABLE users (
@@ -17,6 +17,7 @@ beforeEach(function () {
             password TEXT NOT NULL
         )
     ');
+
 
     $this->auth = new Authenticator([
         'guards' => [

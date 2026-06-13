@@ -2,9 +2,12 @@
 
 namespace Tests;
 
-use PHPUnit\Framework\TestCase as BaseTestCase;
+use Potager\Testing\TestCase as BaseTestCase;
 
+#[\AllowDynamicProperties]
 abstract class TestCase extends BaseTestCase
 {
-    //
+
+    // ...
+
 }

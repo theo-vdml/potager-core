@@ -38,7 +38,7 @@ class Container implements ContainerInterface
     /**
      * Array of singleton instances or placeholders (null before instantiation).
      *
-     * @var array<string, object|null>
+     * @var array<string, mixed|null>
      */
     protected $instances = [];
 
@@ -73,10 +73,10 @@ class Container implements ContainerInterface
      * Register an already instantiated object as a singleton.
      *
      * @param string $id Identifier for the service.
-     * @param object $instance The concrete instance to use.
+     * @param mixed $instance The concrete instance to use.
      * @return void
      */
-    public function instance(string $id, object $instance): void
+    public function instance(string $id, mixed $instance): void
     {
         $this->instances[$id] = $instance;
     }
@@ -113,10 +113,10 @@ class Container implements ContainerInterface
      * Register an instance only if not already registered.
      *
      * @param string $id Identifier for the service.
-     * @param object $instance The service instance.
+     * @param mixed $instance The service instance.
      * @return void
      */
-    public function instanceIfNotExists(string $id, object $instance): void
+    public function instanceIfNotExists(string $id, mixed $instance): void
     {
         if (!$this->has($id)) {
             $this->instances[$id] = $instance;
@@ -134,7 +134,7 @@ class Container implements ContainerInterface
      *
      * @param string $id Service identifier or class name.
      * @param array $parameters Optional named parameters to override autowiring.
-     * @return object Instantiated service.
+     * @return mixed Instantiated service.
      *
      * @throws NotFoundException If the service is not found or class does not exist.
      * @throws ContainerException On resolution or instantiation failure.
@@ -180,12 +180,12 @@ class Container implements ContainerInterface
      * Alias to `make()`.
      *
      * @param string $id The identifier of the entry to retrieve.
-     * @return object The resolved service instance.
+     * @return mixed The resolved service instance.
      *
      * @throws NotFoundException If the service is not found.
      * @throws ContainerException If an error occurs while resolving the service.
      */
-    public function get(string $id): object
+    public function get(string $id): mixed
     {
         return $this->make($id);
     }
@@ -212,7 +212,7 @@ class Container implements ContainerInterface
      *
      * @throws ContainerException If parameter resolution fails or callable cannot be invoked.
      */
-    public function call(callable $callable, array $parameters = [])
+    public function call(callable $callable, array $parameters = []): mixed
     {
 
         if (is_array($callable) && count($callable) === 2) {
@@ -238,11 +238,11 @@ class Container implements ContainerInterface
      *
      * @param callable $factory Factory callable to invoke.
      * @param array $parameters Optional named arguments to override autowiring.
-     * @return object The result of the factory.
+     * @return mixed The result of the factory.
      *
      * @throws ContainerException If the factory cannot be called.
      */
-    protected function callFactory(callable $factory, array $parameters = [])
+    protected function callFactory(callable $factory, array $parameters = []): mixed
     {
         try {
             if (is_array($factory)) {
@@ -266,11 +266,11 @@ class Container implements ContainerInterface
      *
      * @param string $class Fully qualified class name.
      * @param array $parameters Optional named parameters to override autowiring.
-     * @return object Instantiated class.
+     * @return mixed Instantiated class.
      *
      * @throws ContainerException If the class cannot be instantiated.
      */
-    protected function resolve(string $class, array $parameters = [])
+    protected function resolve(string $class, array $parameters = []): mixed
     {
         try {
             $reflector = new ReflectionClass($class);

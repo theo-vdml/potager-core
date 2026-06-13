@@ -47,7 +47,7 @@ class ModelDefinition
 
     /**
      * Get the primary key
-     * @return string
+     * @return ColumnDefinition
      */
     public function getPrimary(): ColumnDefinition
     {
@@ -104,7 +104,6 @@ class ModelDefinition
     public function getColumnsNames(): array
     {
         return array_values(array_map(fn($col) => $col->name, $this->columns));
-
     }
 
     /**
@@ -170,5 +169,4 @@ class ModelDefinition
             ], $this->computeds),
         ];
     }
-
 }

@@ -17,7 +17,6 @@ class Database
 
     protected Connection $connection;
 
-
     /**
      * Database constructor.
      * Initializes the Pixie database connection.
@@ -26,8 +25,6 @@ class Database
     {
         $this->initializeConnection($config);
     }
-
-
 
     /**
      * Get the singleton instance of the Database.
@@ -120,7 +117,7 @@ class Database
     }
 
     /**
-     * Returns a query builder instance, optionally pre-set with a table.
+     * Returns a query builder instance
      *
      * @return QueryBuilderHandler
      */
@@ -139,5 +136,24 @@ class Database
     public static function table(string $table): QueryBuilderHandler
     {
         return static::query()->table($table);
+    }
+
+    /**
+     * Returns a new instance of the query builder handler.
+     */
+    public function getQueryBuilder(): QueryBuilderHandler
+    {
+        return clone $this->connection->getQueryBuilder();
+    }
+
+    /**
+     * Shortcut to create a query builder with a specific table.
+     *
+     * @param string $table
+     * @return QueryBuilderHandler
+     */
+    public function getTableQuery(string $table): QueryBuilderHandler
+    {
+        return clone $this->connection->getQueryBuilder()->table($table);
     }
 }

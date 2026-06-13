@@ -2,7 +2,6 @@
 
 use Potager\Limpid\Attributes\Column;
 use Potager\Limpid\Attributes\Computed;
-use Potager\Limpid\Database;
 use Potager\Limpid\Model;
 
 class User extends Model
@@ -34,12 +33,7 @@ class User extends Model
 }
 
 beforeEach(function () {
-    $db = new Database([
-        'driver' => 'sqlite',
-        'database' => ':memory:'
-    ], true);
-
-    $pdo = $db->getPdo();
+    $pdo = $this->pdo();
 
     // Create a sample database
     $pdo->exec('
@@ -89,8 +83,7 @@ test('Model computed property greating is correct for different users', function
     expect($user1->greating)->toBe('Hello Alice!')
         ->and($user2->greating)->toBe('Hello Bob!')
         ->and($user3->greating)->toBe('Hello Charlie!');
-});
-;
+});;
 
 test('Model computed properties return correct types', function () {
     $user = User::find(1);

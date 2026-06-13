@@ -12,7 +12,6 @@ use Potager\Limpid\Exceptions\MissingComputedResolverException;
 use Potager\Support\Utils;
 use InvalidArgumentException;
 use RuntimeException;
-use stdClass;
 
 /**
  * Base abstract model class for ORM functionality.
@@ -20,6 +19,51 @@ use stdClass;
  */
 abstract class Model
 {
+
+    /**
+     * The database instance or a closure that resolves to a database instance.
+     * Using a closure allows for lazy-loading the database connection, 
+     * ensuring that the PDO connection is only established when an ORM 
+     * operation is actually performed.
+     *
+     * @var Database|\Closure|null
+     */
+    protected static Database|\Closure|null $_databaseResolver = null;
+
+    /**
+     * Sets the database resolver for the ORM.
+     *
+     * This method binds the database connection to the model statically.
+     * It accepts either a direct Database instance (ideal for mocking in tests)
+     * or a Closure that returns a Database instance (ideal for production lazy-loading).
+     *
+     * @param \Closure|Database|null $resolver The database instance or a resolver closure.
+     * @return void
+     */
+    public static function setDatabaseResolver(\Closure|Database|null $resolver): void
+    {
+        static::$_databaseResolver = $resolver;
+    }
+
+    /**
+     * Resolves and returns the active database instance.
+     *
+     * If the underlying resolver is a Closure, it executes it to retrieve 
+     * the Database instance. If it's already a Database instance, it returns 
+     * it directly.
+     *
+     * @return Database The resolved database instance.
+     * @throws RuntimeException If the database resolver has not been initialized.
+     */
+    public static function getDatabase(): Database
+    {
+        if (!static::$_databaseResolver) {
+            throw new RuntimeException("Database instance not initialized. Call " . static::class . "::setDatabaseResolver() before using ORM operations.");
+        }
+
+        return (static::$_databaseResolver instanceof \Closure) ? (static::$_databaseResolver)() : static::$_databaseResolver;
+    }
+
     /* 
      * -----------------------------------------------------------------------------------------------------------------
      *                                 PROPERTY DECLARATIONS & STATIC CACHES
@@ -300,9 +344,9 @@ abstract class Model
      * 
      * @param \stdClass|array $values
      * @param bool $allowExtraProperties
-     * @return Model
+     * @return static
      */
-    protected function fill(stdClass|array $values, bool $allowExtraProperties): static
+    protected function fill(\stdClass|array $values, bool $allowExtraProperties): static
     {
         $this->_attributes = [];
         $this->merge($values, $allowExtraProperties);
@@ -312,19 +356,19 @@ abstract class Model
     /**
      * Merge values into the model properties.
      *
-     * @param stdClass|array $values Input values to merge (array or stdClass).
+     * @param \stdClass|array $values Input values to merge (array or \stdClass).
      * @param bool $allowExtraProperties Whether to allow properties not defined in the model.
      * @return static Returns the current model instance for method chaining.
      * @throws InvalidArgumentException Throws if a property is undefined and extras are disallowed.
      * @internal Internal method, not intended for public API use.
      */
-    public function merge(stdClass|array $values, bool $allowExtraProperties = false): static
+    public function merge(\stdClass|array $values, bool $allowExtraProperties = false): static
     {
         // Get the short class name for error messages or logging.
         $model = Utils::classBasename(static::class);
 
-        // Convert stdClass object to array for easier iteration.
-        if ($values instanceof stdClass) {
+        // Convert \stdClass object to array for easier iteration.
+        if ($values instanceof \stdClass) {
             $values = (array) $values;
         }
 
@@ -373,10 +417,10 @@ abstract class Model
      * consumes its data to populate the model, hydrates the original attributes for
      * change tracking, and marks the instance as persisted.
      *
-     * @param stdClass|array $result  The raw query result to initialize the model with.
+     * @param \stdClass|array $result  The raw query result to initialize the model with.
      * @return static                 A fully-hydrated, persisted instance of the model.
      */
-    protected static function createFromQueryResult(stdClass|array $result): static
+    protected static function createFromQueryResult(\stdClass|array $result): static
     {
         $instance = new static();
 
@@ -394,10 +438,10 @@ abstract class Model
      * Iterates over the result data, determines the corresponding model column for each
      * key, applies any defined consumer or transformer logic, and sets the attribute value.
      *
-     * @param stdClass|array $result  The raw data to be mapped into the model.
+     * @param \stdClass|array $result  The raw data to be mapped into the model.
      * @return void
      */
-    public function _consumeQueryResult(stdClass|array $result): void
+    public function _consumeQueryResult(\stdClass|array $result): void
     {
         $result = (array) $result;
         foreach ($result as $key => $value) {
@@ -449,10 +493,10 @@ abstract class Model
      * This method fills the model with provided attributes, disallows any extra
      * (undefined) properties, and leaves the instance marked as non-persisted.
      *
-     * @param stdClass|array $attributes The attribute values to populate the model with.
+     * @param \stdClass|array $attributes The attribute values to populate the model with.
      * @return static A new model instance not yet persisted to the database.
      */
-    protected static function newUnsavedInstance(stdClass|array $attributes): static
+    protected static function newUnsavedInstance(\stdClass|array $attributes): static
     {
         $instance = new static();
         $instance->fill($attributes, allowExtraProperties: false);
@@ -714,7 +758,7 @@ abstract class Model
      *
      * @return static Returns the current model instance after persistence.
      *
-     * @throws \RuntimeException If attempting to update without a primary key or if the update fails.
+     * @throws RuntimeException If attempting to update without a primary key or if the update fails.
      */
     public function save(): static
     {
@@ -826,7 +870,9 @@ abstract class Model
      */
     public static function query(): QueryBuilderHandler
     {
-        return Database::table(static::getDefinition()->getTable());
+        // return Database::table(static::getDefinition()->getTable());
+        $table = static::getDefinition()->getTable();
+        return static::getDatabase()->getTableQuery($table);
     }
 
     /*

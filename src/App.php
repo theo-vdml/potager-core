@@ -2,10 +2,12 @@
 
 namespace Potager;
 
+use Composer\Autoload\ClassLoader;
 use Potager\Auth\Authenticator;
 use Potager\Container\Container;
 use Potager\Exceptions\Handler;
 use Potager\Limpid\Database;
+use Potager\Limpid\Model;
 use Potager\Mailer\MailManager;
 use Potager\Router\Request;
 use Potager\Router\RequestFactory;
@@ -35,20 +37,91 @@ class App
     protected ?Container $container = null;
 
     /**
+     * Base path of the project.
+     *
+     * @var string
+     */
+    protected string $basePath;
+
+    /**
      * App constructor.
      *
      * Initializes the application, including the configuration, service container,
-     * and MySQL database connection using Grape.
+     * and MySQL database connection.
      *
-     * @param Container|null $container Optional custom service container.
+     * @param string|null $basePath The base path of the project.
      * @throws \Exception If the container is required but not provided.
      */
-    public function __construct(?Container $container = null)
+    public function __construct(?string $basePath = null)
     {
-        $this->container = $container ?? new Container();
-        $this->bootstrap();
-        $this->registerHandlers();
         static::$instance = $this;
+
+        $this->container = new Container();
+
+        $this->setBasePath($basePath);
+        $this->registerBaseBindings();
+        $this->registerHandlers();
+    }
+
+    public static function create(?string $basePath = null): static
+    {
+        return new static($basePath);
+    }
+
+    public function withRouting(string $routesPath = '/routes'): self
+    {
+        $fullRoutesPath = path($routesPath);
+
+        if (is_dir($fullRoutesPath)) {
+            $routeFiles = glob($fullRoutesPath . '/*.php');
+            foreach ($routeFiles as $file) {
+                require_once $file;
+            }
+        }
+
+        return $this;
+    }
+
+    public function withServices(callable $callback): self
+    {
+        // On passe le conteneur (ou l'app) à la fonction anonyme du développeur
+        $callback($this->container, $this);
+
+        return $this;
+    }
+
+    public static function inferBasePath(): string
+    {
+        return match (true) {
+            isset($_ENV['APP_BASE_PATH']) => $_ENV['APP_BASE_PATH'],
+            isset($_SERVER['APP_BASE_PATH']) => $_SERVER['APP_BASE_PATH'],
+            default => dirname(array_values(array_filter(
+                array_keys(ClassLoader::getRegisteredLoaders()),
+                fn(string $path) => ! str_starts_with($path, 'phar://')
+            ))[0]),
+        };
+    }
+
+    /**
+     * Set the base path for the application.
+     * If no path is provided, the application will attempt to infer it.
+     *
+     * @param string|null $basePath
+     * @return static
+     */
+    public function setBasePath(?string $basePath = null): static
+    {
+        // 1. Définition et formatage du chemin
+        $this->basePath = $basePath
+            ? rtrim($basePath, '\/')
+            : static::inferBasePath();
+
+        // 2. Synchronisation avec le Container (si celui-ci est déjà initialisé)
+        if ($this->container) {
+            $this->container->instance('path.base', $this->basePath);
+        }
+
+        return $this;
     }
 
     /**
@@ -57,10 +130,12 @@ class App
      * @return void
      * @throws \Exception If no container is available.
      */
-    protected function bootstrap(): void
+    protected function registerBaseBindings(): void
     {
         if (!$this->container) {
-            throw new \Exception("Cannot register services without a container set");
+            throw new \Exception(
+                "Failed to register base bindings: The service container is not initialized."
+            );
         }
 
         $this->container->instanceIfNotExists(Config::class, new Config());
@@ -83,6 +158,8 @@ class App
             $config = $this->getConfig()->get('auth');
             return new Authenticator($config);
         });
+
+        Model::setDatabaseResolver(fn() => $this->container->make(Database::class));
     }
 
     /**
@@ -114,15 +191,34 @@ class App
     /**
      * Retrieve the singleton instance of the App.
      *
-     * @param Container|null $container Optional container to initialize the app with.
+     * @throws \RuntimeException If the app has not been initialized yet.
      * @return App
      */
-    public static function getInstance(?Container $container = null): App
+    public static function getInstance(): App
     {
-        if (self::$instance === null) {
-            self::$instance = new self($container);
+        if (static::$instance === null) {
+            throw new \RuntimeException(
+                'The application has not been initialized. You must instantiate the App first (usually in public/index.php).'
+            );
         }
-        return self::$instance;
+        return static::$instance;
+    }
+
+    public function handleRequest(): void
+    {
+        /** @var Router $router */
+        $router = $this->container->make(Router::class);
+        $router->handleRequest();
+    }
+
+    /**
+     * Get the base path of the project.
+     *
+     * @return string
+     */
+    public function getBasePath(): string
+    {
+        return $this->basePath;
     }
 
     /**
@@ -238,11 +334,11 @@ class App
             $instance = self::getInstance();
 
             if (!$instance->container->has($service)) {
-                throw new \BadMethodCallException("Undefined service: {$service}");
+                throw new \BadMethodCallException("Attempted to resolve unregistered service: [{$service}]. Ensure this service is bound in the container before calling App::use{$service}().");
             }
 
             return $instance->container->make($service, $args);
         }
-        throw new \BadMethodCallException("Undefined static method {$method}");
+        throw new \BadMethodCallException("Call to undefined static method Potager\App::{$method}().");
     }
 }

@@ -5,15 +5,10 @@ use Potager\Container\Exceptions\ContainerException;
 use Potager\Container\Exceptions\NotFoundException;
 use Psr\Container\ContainerInterface;
 
-class Foo
-{
-}
+class Foo {}
 class Bar
 {
-    public function __construct(Foo $foo)
-    {
-        $this->foo = $foo;
-    }
+    public function __construct(public Foo $foo) {}
 }
 class Baz
 {
@@ -24,32 +19,19 @@ class Baz
 }
 class NeedsScalar
 {
-    public function __construct(string $value)
-    {
-        $this->value = $value;
-    }
+    public function __construct(public string $value) {}
 }
 class WithDefault
 {
-    public function __construct(string $value = 'default')
-    {
-        $this->value = $value;
-    }
+    public function __construct(public string $value = 'default') {}
 }
 class NeedsBoth
 {
-    public function __construct(Foo $foo, string $name = 'Jane')
-    {
-        $this->foo = $foo;
-        $this->name = $name;
-    }
+    public function __construct(public Foo $foo, public string $name = 'Jane') {}
 }
 class NeedsContainer
 {
-    public function __construct(ContainerInterface $container)
-    {
-        $this->container = $container;
-    }
+    public function __construct(public ContainerInterface $container) {}
 }
 class StaticHandler
 {
@@ -58,10 +40,7 @@ class StaticHandler
         return 'Static OK';
     }
 }
-abstract class AbstractClass
-{
-
-}
+abstract class AbstractClass {}
 class FactoryClass
 {
     public function create(Foo $foo)
@@ -193,7 +172,6 @@ describe('Automatic dependency resolution and injection', function () {
         $instance = $container->make(NeedsContainer::class);
         expect($instance->container)->toBeInstanceOf(Container::class);
     });
-
 });
 
 describe('Parameter handling during resolution', function () {
@@ -327,5 +305,3 @@ describe('Error handling', function () {
         $container->make(NeedsScalar::class);
     })->throws(ContainerException::class);
 });
-
-?>
