@@ -5,6 +5,7 @@ namespace Potager\Container;
 use Exception;
 use Potager\Container\Exceptions\ContainerException;
 use Potager\Container\Exceptions\NotFoundException;
+use Potager\Support\Arr;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionFunction;
@@ -41,6 +42,13 @@ class Container implements ContainerInterface
      * @var array<string, mixed|null>
      */
     protected $instances = [];
+
+    /**
+     * Array of aliases for service identifiers.
+     *
+     * @var array<string, string>
+     */
+    protected $aliases = [];
 
     /**
      * Register a service binding (non-singleton).
@@ -123,6 +131,89 @@ class Container implements ContainerInterface
         }
     }
 
+    /**
+     * Register an alias for a service identifier.
+     *
+     * @param string|array $alias One or more aliases to register.
+     * @param string $target The target service identifier that the alias points to.
+     * @return void
+     */
+    public function alias(string|array $alias, string $target): void
+    {
+        $aliases = Arr::wrap($alias);
+
+        foreach ($aliases as $a) {
+            $this->aliases[$a] = $target;
+        }
+    }
+
+    /**
+     * Remove one or more aliases.
+     *
+     * @param string|array $alias One or more aliases to remove.
+     * @return void
+     */
+    public function unalias(string|array $alias): void
+    {
+        $aliases = Arr::wrap($alias);
+
+        foreach ($aliases as $a) {
+            unset($this->aliases[$a]);
+        }
+    }
+
+    /**
+     * Clear all registered aliases.
+     *
+     * @return void
+     */
+    public function clearAliases(): void
+    {
+        $this->aliases = [];
+    }
+
+    /**
+     * Clear all aliases that point to a specific service identifier.
+     *
+     * @param string|array $id One or more service identifiers to clear aliases for.
+     * @return void
+     */
+    public function clearAliasesFor(string|array $id): void
+    {
+        $ids = Arr::wrap($id);
+
+        $targets = array_map(fn($id) => $this->resolveAlias($id), $ids);
+
+        foreach ($this->aliases as $alias => $target) {
+            if (in_array($target, $targets, true)) {
+                unset($this->aliases[$alias]);
+            }
+        }
+    }
+
+    /**
+     * Resolve an alias to its final service identifier.
+     *
+     * @param string $id The alias or service identifier to resolve.
+     * @return string The resolved service identifier.
+     *
+     * @throws ContainerException If a circular alias is detected.
+     */
+    public function resolveAlias(string $id): string
+    {
+        $resolved = [];
+
+        while (isset($this->aliases[$id])) {
+            if (isset($resolved[$id])) {
+                throw new ContainerException("Circular alias detected: " . implode(" -> ", array_merge(array_keys($resolved), [$id])));
+            }
+            $resolved[$id] = true;
+            $id = $this->aliases[$id];
+        }
+
+        return $id;
+    }
+
 
 
     /**
@@ -141,6 +232,8 @@ class Container implements ContainerInterface
      */
     public function make(string $id, array $parameters = []): mixed
     {
+        $id = $this->resolveAlias($id);
+
         try {
             if (array_key_exists($id, $this->instances) && $this->instances[$id] !== null) {
                 return $this->instances[$id];
@@ -198,6 +291,8 @@ class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
+        $id = $this->resolveAlias($id);
+
         return array_key_exists($id, $this->bindings) || array_key_exists($id, $this->instances);
     }
 
@@ -253,7 +348,7 @@ class Container implements ContainerInterface
                 $reflector = new ReflectionFunction($factory);
             }
 
-            $args = $args = $this->resolveParameters($parameters, $reflector->getParameters());
+            $args = $this->resolveParameters($parameters, $reflector->getParameters());
 
             return call_user_func_array($factory, $args);
         } catch (Throwable $e) {

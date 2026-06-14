@@ -4,7 +4,9 @@ namespace Potager;
 
 use Composer\Autoload\ClassLoader;
 use Potager\Auth\Authenticator;
+use Potager\Configuration\Repository;
 use Potager\Container\Container;
+use Potager\Contracts\Configuration\RepositoryInterface;
 use Potager\Exceptions\Handler;
 use Potager\Limpid\Database;
 use Potager\Limpid\Model;
@@ -59,6 +61,7 @@ class App
         $this->container = new Container();
 
         $this->setBasePath($basePath);
+        $this->loadConfiguration();
         $this->registerBaseBindings();
         $this->registerHandlers();
     }
@@ -125,6 +128,18 @@ class App
     }
 
     /**
+     * Load configuration files from the config directory and bind them to the container.
+     *
+     * @return void
+     */
+    protected function loadConfiguration(): void
+    {
+        $repository = Repository::fromDirectory($this->basePath . '/config');
+        $this->container->instanceIfNotExists('config', $repository);
+        $this->container->alias([RepositoryInterface::class, Repository::class], 'config');
+    }
+
+    /**
      * Register essential application services as singletons if not already present.
      *
      * @return void
@@ -138,11 +153,13 @@ class App
             );
         }
 
-        $this->container->instanceIfNotExists(Config::class, new Config());
+        // Backward-compatible alias so existing code using Config::class still resolves
         $this->container->instanceIfNotExists(Session::class, new Session());
 
         $this->container->singletonIfNotExists(Router::class);
-        $this->container->singletonIfNotExists(MailManager::class);
+        $this->container->singletonIfNotExists(MailManager::class, function (): MailManager {
+            return $this->container->make(MailManager::class);
+        });
 
         $this->container->singletonIfNotExists(Request::class, function (): Request {
             $request = RequestFactory::fromGlobals();
@@ -234,19 +251,19 @@ class App
     /**
      * Get the configuration instance.
      *
-     * @return Config
+     * @return RepositoryInterface
      */
-    public function getConfig(): Config
+    public function getConfig(): RepositoryInterface
     {
-        return $this->container->make(Config::class);
+        return $this->container->make(RepositoryInterface::class);
     }
 
     /**
      * Static accessor for the configuration instance.
      *
-     * @return Config
+     * @return RepositoryInterface
      */
-    public static function useConfig(): Config
+    public static function useConfig(): RepositoryInterface
     {
         return static::getInstance()->getConfig();
     }

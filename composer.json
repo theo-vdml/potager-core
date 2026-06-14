@@ -9,6 +9,8 @@
             "Tests\\": "tests/"
         },
         "files": [
+            "src/Helpers/env.php",
+            "src/Helpers/config.php",
             "src/Helpers/path.php",
             "src/Helpers/session.php",
             "src/Helpers/view.php"

@@ -3,13 +3,12 @@
 namespace Potager\Exceptions;
 
 use ErrorException;
-use Exception;
 use Throwable;
 
 use Psr\Log\LoggerInterface;
 use DohFormatting\Doh\Doh;
 
-use Potager\Config;
+use Potager\Contracts\Configuration\RepositoryInterface;
 use Potager\LatteEngine;
 use Potager\Router\Request;
 
@@ -37,18 +36,18 @@ class Handler
     /**
      * Initializes the error handler with dependencies.
      *
-     * @param Config $config Application configuration.
+     * @param RepositoryInterface $config Application configuration.
      * @param Request $request The current HTTP request.
      * @param LatteEngine $latteEngine Template rendering engine.
      * @param LoggerInterface|null $logger Optional PSR-3 logger.
      */
     public function __construct(
-        private Config $config,
+        private RepositoryInterface $config,
         private Request $request,
         private LatteEngine $latteEngine,
         private ?LoggerInterface $logger = null,
     ) {
-        $this->isDevelopmentMode = $this->config->get('environment', 'production') === 'dev';
+        $this->isDevelopmentMode = $this->config->get('app.environment', $this->config->get('environment', 'production')) === 'dev';
     }
 
     /**
@@ -299,7 +298,6 @@ class Handler
         $statusHtml = htmlspecialchars((string) $status);
         $messageHtml = htmlspecialchars($message);
         echo "<html><head><title>Error</title></head><body><h1>{$statusHtml} Error</h1><p>{$messageHtml}</p></body></html>";
-
     }
 
     /**

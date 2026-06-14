@@ -2,16 +2,18 @@
 
 namespace Potager\Mailer;
 
-use Potager\App;
+use Potager\Contracts\Configuration\RepositoryInterface;
 use Potager\Mailer\Transports\SmtpTransport;
 
 class MailManager
 {
     protected array $transports = [];
 
-    public function use(string $driver)
+    public function __construct(protected readonly RepositoryInterface $config) {}
+
+    public function use(string $driver): Mailer
     {
-        if (!App::useConfig()->get("mail.drivers.$driver")) {
+        if (!$this->config->get("mail.drivers.$driver")) {
             throw new \InvalidArgumentException("Mail driver [{$driver}] is not configured.");
         }
 
@@ -22,20 +24,19 @@ class MailManager
         return new Mailer($this->transports[$driver]);
     }
 
-    public function send(\Closure $callback)
+    public function send(\Closure $callback): void
     {
-        $default = App::useConfig()->get('mail.default');
+        $default = $this->config->get('mail.default', 'smtp');
         $this->use($default)->send($callback);
     }
 
-    protected function createTransport($driver)
+    protected function createTransport(string $driver): mixed
     {
-        $driverConfig = App::useConfig()->get("mail.drivers.$driver");
+        $driverConfig = $this->config->get("mail.drivers.$driver", []);
 
         return match ($driver) {
-            'smtp' => new SmtpTransport($driverConfig),
-            default => throw new \InvalidArgumentException("Unspported mail driver [{$driver}].")
+            'smtp'  => new SmtpTransport($driverConfig),
+            default => throw new \InvalidArgumentException("Unsupported mail driver [{$driver}].")
         };
     }
-
 }

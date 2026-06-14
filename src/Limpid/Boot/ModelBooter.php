@@ -349,7 +349,7 @@ class ModelBooter
      * Uses lazy-loading via closures to minimize overhead.
      *
      * @param ReflectionProperty|ReflectionMethod $reflector
-     * @return array<class-string, Closure(): object> Lazily-instantiable attribute map
+     * @return array<class-string, \Closure(): object> Lazily-instantiable attribute map
      */
     private static function extractAttributes(ReflectionProperty|ReflectionMethod $reflector): array
     {
