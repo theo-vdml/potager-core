@@ -317,6 +317,16 @@ class App
         return $container->make(Authenticator::class);
     }
 
+    public function __call(string $method, array $args): mixed
+    {
+        $container = $this->getContainer();
+        if (method_exists($container, $method)) {
+            return $container->$method(...$args);
+        }
+
+        throw new \BadMethodCallException("Method {$method} does not exist on App or Container.");
+    }
+
     /**
      * Magic static method handler for dynamic useXyz service accessors.
      *
@@ -339,6 +349,14 @@ class App
 
             return $instance->container->make($service, $args);
         }
-        throw new \BadMethodCallException("Call to undefined static method Potager\App::{$method}().");
+
+        $instance = static::getInstance();
+        $container = $instance->getContainer();
+
+        if (method_exists($container, $method)) {
+            return $container->$method(...$args);
+        }
+
+        throw new \BadMethodCallException("Method {$method} does not exist on App or Container.");
     }
 }

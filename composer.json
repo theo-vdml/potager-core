@@ -28,7 +28,8 @@
         "potager/pixie": "dev-master",
         "scrivo/highlight.php": "^9.18",
         "theovdml/doh": "^1.0",
-        "willdurand/negotiation": "^3.1"
+        "willdurand/negotiation": "^3.1",
+        "psr/container": "^2.0"
     },
     "require-dev": {
         "pestphp/pest": "^3.8",
