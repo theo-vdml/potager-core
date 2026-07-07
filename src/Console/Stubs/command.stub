@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Commands;
+
+use Potager\Console\Command;
+
+class {{name}} extends Command
+{
+    protected string $name = '{{signature}}';
+    protected string $description = '';
+
+    public function handle(): int
+    {
+        return 0;
+    }
+}

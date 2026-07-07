@@ -1,0 +1,13 @@
+<?php
+
+namespace App\Controllers;
+
+use Potager\Controller;
+
+class {{name}} extends Controller
+{
+    public function index()
+    {
+        //
+    }
+}

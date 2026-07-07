@@ -2,6 +2,7 @@
     "name": "potager/potager-core",
     "description": "A small PHP MVC Framework",
     "type": "library",
+    "bin": ["bin/farmer"],
     "autoload": {
         "psr-4": {
             "Potager\\": "src/",

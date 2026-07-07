@@ -118,6 +118,16 @@ class Router
 	}
 
 	/**
+	 * Return all registered routes.
+	 *
+	 * @return Route[]
+	 */
+	public function getRoutes(): array
+	{
+		return $this->routes;
+	}
+
+	/**
 	 * Find a registered route by its name.
 	 *
 	 * @param string $name

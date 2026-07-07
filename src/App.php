@@ -5,9 +5,12 @@ namespace Potager;
 use Composer\Autoload\ClassLoader;
 use Potager\Auth\Authenticator;
 use Potager\Configuration\Repository;
+use Potager\Console\IO\ArgvInput;
+use Potager\Console\IO\Output;
 use Potager\Container\Container;
 use Potager\Contracts\Configuration\RepositoryInterface;
 use Potager\Exceptions\Handler;
+use Potager\Console\Kernel;
 use Potager\Limpid\Database;
 use Potager\Limpid\Model;
 use Potager\Mailer\MailManager;
@@ -69,6 +72,33 @@ class App
     public static function create(?string $basePath = null): static
     {
         return new static($basePath);
+    }
+
+    public function withCommands(?string $commandsPath = null): static
+    {
+        /** @var Kernel $kernel */
+        $kernel = $this->container->make(Kernel::class);
+        $kernel->bootstrap();
+
+        $fullPath = $commandsPath ?? $this->basePath . '/commands';
+
+        if (is_dir($fullPath)) {
+            foreach (glob($fullPath . '/*.php') as $file) {
+                require_once $file;
+            }
+        }
+
+        return $this;
+    }
+
+    public function handleCommand(?ArgvInput $input = null): int
+    {
+        $input ??= new ArgvInput();
+        $output = new Output();
+
+        /** @var Kernel $kernel */
+        $kernel = $this->container->make(Kernel::class);
+        return $kernel->handle($input, $output);
     }
 
     public function withRouting(string $routesPath = '/routes'): self
@@ -153,18 +183,12 @@ class App
             );
         }
 
-        // Backward-compatible alias so existing code using Config::class still resolves
         $this->container->instanceIfNotExists(Session::class, new Session());
 
         $this->container->singletonIfNotExists(Router::class);
-        $this->container->singletonIfNotExists(MailManager::class, function (): MailManager {
-            return $this->container->make(MailManager::class);
-        });
+        $this->container->singletonIfNotExists(MailManager::class);
 
-        $this->container->singletonIfNotExists(Request::class, function (): Request {
-            $request = RequestFactory::fromGlobals();
-            return $request;
-        });
+        $this->container->singletonIfNotExists(Request::class, RequestFactory::fromGlobals(...));
 
         $this->container->singletonIfNotExists(Database::class, function (): Database {
             $config = $this->getConfig()->get('database');
@@ -177,6 +201,8 @@ class App
         });
 
         Model::setDatabaseResolver(fn() => $this->container->make(Database::class));
+
+        $this->container->singletonIfNotExists(Kernel::class);
     }
 
     /**
@@ -186,6 +212,10 @@ class App
      */
     protected function registerHandlers(): void
     {
+        if (php_sapi_name() === 'cli') {
+            return;
+        }
+
         set_error_handler(function ($serverity, $message, $file, $line): bool {
             /** @var Handler $handler */
             $handler = $this->container->make(Handler::class);

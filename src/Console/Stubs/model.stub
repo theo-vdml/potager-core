@@ -1,0 +1,10 @@
+<?php
+
+namespace App\Models;
+
+use Potager\Limpid\Model;
+
+class {{name}} extends Model
+{
+    //
+}

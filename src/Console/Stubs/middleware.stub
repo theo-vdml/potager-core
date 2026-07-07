@@ -1,0 +1,14 @@
+<?php
+
+namespace App\Middleware;
+
+use Potager\Contracts\MiddlewareInterface;
+use Potager\Router\HttpContext;
+
+class {{name}} implements MiddlewareInterface
+{
+    public function handle(HttpContext $ctx, callable $next): void
+    {
+        $next();
+    }
+}

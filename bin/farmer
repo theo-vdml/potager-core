@@ -1,0 +1,47 @@
+#!/usr/bin/env php
+<?php
+
+/*
+|--------------------------------------------------------------------------
+| Farmer — Potager CLI Entry Point
+|--------------------------------------------------------------------------
+|
+| This script is the entry point for the Potager CLI. It locates the
+| Composer autoloader by walking up from the current working directory,
+| then bootstraps the application and dispatches the given command.
+|
+*/
+
+// Walk up from CWD to find the Composer autoloader
+$autoloaderPath = (static function (): ?string {
+    $dir = getcwd();
+    for ($i = 0; $i < 6; $i++) {
+        $candidate = $dir . '/vendor/autoload.php';
+        if (file_exists($candidate)) {
+            return $candidate;
+        }
+        $parent = dirname($dir);
+        if ($parent === $dir) {
+            break;
+        }
+        $dir = $parent;
+    }
+    return null;
+})();
+
+if ($autoloaderPath === null) {
+    fwrite(STDERR, "Error: Unable to find the Composer autoloader.\n");
+    fwrite(STDERR, "Make sure you have run `composer install` in your project root.\n");
+    exit(1);
+}
+
+require_once $autoloaderPath;
+
+use Potager\App;
+use Potager\Console\IO\ArgvInput;
+
+$app = App::create()
+    ->withRouting()
+    ->withCommands();
+
+exit($app->handleCommand(new ArgvInput()));
